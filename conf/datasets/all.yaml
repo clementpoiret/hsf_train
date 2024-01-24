@@ -275,3 +275,27 @@ datasets:
       1: "DG"
       2: "CA"
       3: "SUB"
+
+  clark:
+    path: "hippocampus_clark_3T"
+    ca_type: "1/23"
+    patterns:
+      right_t2:
+        mri: "**/anon*0010*Hippocampus_right*.nii.gz"
+        label: "Hippocampal_Segmentation*hippocampus_right*.nii.gz"
+      left_t2:
+        mri: "**/anon*0010*Hippocampus_left*.nii.gz"
+        label: "Hippocampal_Segmentation*hippocampus_left*.nii.gz"
+    labels:
+      1: 1
+      2: 3
+      3: 2
+      4: 4
+      5: 0
+      6: 4
+      7: 0
+    labels_names:
+      1: "DG"
+      2: "CA1"
+      3: "CA2/3"
+      4: "SUB"
