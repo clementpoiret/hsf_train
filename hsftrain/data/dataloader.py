@@ -2,7 +2,7 @@ import random
 from pathlib import Path
 from typing import Optional
 
-import pytorch_lightning as pl
+import lightning as L
 import torchio as tio
 from torch.utils.data import DataLoader
 
@@ -23,7 +23,7 @@ def train_test_split(idx, train_ratio=.8, replace=False, k_sample=None):
     return train_idx, test_idx
 
 
-class MRIDataModule(pl.LightningDataModule):
+class MRIDataModule(L.LightningDataModule):
 
     def __init__(self,
                  data_dir: list,

@@ -178,3 +178,4 @@ outputs/
 
 ### PyTorch Lightning ###
 lightning_logs/
+wandb

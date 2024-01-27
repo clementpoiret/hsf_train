@@ -9,6 +9,18 @@ from torch import einsum
 import numpy as np
 
 
+def sum_tensor(inp, axes, keepdim=False):
+    # copy from: https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunet/utilities/tensor_utilities.py
+    axes = np.unique(axes).astype(int)
+    if keepdim:
+        for ax in axes:
+            inp = inp.sum(int(ax), keepdim=True)
+    else:
+        for ax in sorted(axes, reverse=True):
+            inp = inp.sum(int(ax))
+    return inp
+
+
 def get_tp_fp_fn(net_output, gt, axes=None, mask=None, square=False):
     """
     net_output must be (b, c, x, y(, z)))

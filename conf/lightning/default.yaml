@@ -2,7 +2,8 @@ accelerator: "gpu"
 strategy: "auto"
 devices: "-1"
 precision: "bf16-true"
-max_epochs: 512
-progress_bar_refresh_rate: 8
+max_epochs: 256
+log_every_n_steps: 1
 benchmark: true
 deterministic: false
+accumulate_grad_batches: 16

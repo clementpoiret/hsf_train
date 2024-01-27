@@ -1,4 +1,5 @@
-main_path: "/mnt/hdd/datasets/hsf/"
+main_path: "/mnt/hsfdata/hsf/"
+output_path: "/mnt/hsfmodels/"
 batch_size: 1
 num_workers: 16
 pin_memory: True
@@ -281,11 +282,17 @@ datasets:
     ca_type: "1/23"
     patterns:
       right_t2:
-        mri: "**/anon*0010*Hippocampus_right*.nii.gz"
-        label: "Hippocampal_Segmentation*hippocampus_right*.nii.gz"
+        mri: "**/t2w_Hippocampus_right_ElasticSyN_crop.nii.gz"
+        label: "t2w_Hippocampus_right_ElasticSyN_seg_crop.nii.gz"
       left_t2:
-        mri: "**/anon*0010*Hippocampus_left*.nii.gz"
-        label: "Hippocampal_Segmentation*hippocampus_left*.nii.gz"
+        mri: "**/t2w_Hippocampus_left_ElasticSyN_crop.nii.gz"
+        label: "t2w_Hippocampus_left_ElasticSyN_seg_crop.nii.gz"
+      averaged_right_t2:
+        mri: "**/averaged_t2w_Hippocampus_right_ElasticSyN_crop.nii.gz"
+        label: "averaged_t2w_Hippocampus_right_ElasticSyN_seg_crop.nii.gz"
+      averaged_left_t2:
+        mri: "**/averaged_t2w_Hippocampus_left_ElasticSyN_crop.nii.gz"
+        label: "averaged_t2w_Hippocampus_left_ElasticSyN_seg_crop.nii.gz"
     labels:
       1: 1
       2: 3

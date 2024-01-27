@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from hsftrain.models.layers import SwitchNorm3d
 
 
-def conv3d(in_channels, out_channels, kernel_size, padding, bias, dilation=1):
+def conv3d(in_channels, out_channels, kernel_size, bias, padding, dilation=1):
     return nn.Conv3d(in_channels,
                      out_channels,
                      kernel_size,

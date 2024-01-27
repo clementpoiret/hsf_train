@@ -278,27 +278,27 @@ class SegmentationModel(L.LightningModule):
     def configure_optimizers(self):
         num_iterations = self.epochs * self.steps_per_epoch
 
-        optimizer = optimizer(params=filter(lambda p: p.requires_grad,
-                                            self.parameters()),
-                              lr=self.lr,
-                              epochs=self.epochs,
-                              steps_per_epoch=self.steps_per_epoch,
-                              betas=[0.9, 0.999],
-                              weight_decay=0,
-                              weight_decouple=True,
-                              fixed_decay=False,
-                              delta=0.1,
-                              wd_ratio=0.1,
-                              use_gc=False,
-                              nesterov=False,
-                              r=0.95,
-                              adanorm=False,
-                              adam_debias=False,
-                              demon=True,
-                              agc_clipping_value=1e-2,
-                              agc_eps=1e-3,
-                              eps=1e-8)
-        scheduler = LinearWarmupCosineAnnealingLR(
+        optimizer = self.optimizer(params=filter(lambda p: p.requires_grad,
+                                                 self.parameters()),
+                                   lr=self.learning_rate,
+                                   epochs=self.epochs,
+                                   steps_per_epoch=self.steps_per_epoch,
+                                   betas=[0.9, 0.999],
+                                   weight_decay=0,
+                                   weight_decouple=True,
+                                   fixed_decay=False,
+                                   delta=0.1,
+                                   wd_ratio=0.1,
+                                   use_gc=False,
+                                   nesterov=False,
+                                   r=0.95,
+                                   adanorm=False,
+                                   adam_debias=False,
+                                   demon=True,
+                                   agc_clipping_value=1e-2,
+                                   agc_eps=1e-3,
+                                   eps=1e-8)
+        scheduler = self.scheduler(
             optimizer,
             warmup_epochs=int(0.1 * self.epochs) * self.steps_per_epoch,
             max_epochs=num_iterations,
@@ -314,7 +314,7 @@ class SegmentationModel(L.LightningModule):
         head = names.get("HEAD", -1)
         tail = names.get("TAIL", -2)
 
-        y_hat = self.forward(x.float())
+        y_hat = self.forward(x.bfloat16())
         loss = forgiving_loss(self.seg_loss,
                               y_hat,
                               y,
