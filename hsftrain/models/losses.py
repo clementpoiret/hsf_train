@@ -131,3 +131,79 @@ class FocalTversky_loss(nn.Module):
             net_output, target, loss_mask)  # = 1-tversky(net_output, target)
         focal_tversky = torch.pow(tversky_loss, self.gamma)
         return focal_tversky
+
+
+def forgiving_loss(loss, input, target, ca_type, head=-1, tail=-2):
+    # mask = torch.where((target == head) | (target == tail),
+    #                    torch.tensor(0., device=input.device),
+    #                    torch.tensor(1., device=input.device))
+    # target *= mask.long()  # when target contains HEAD and TAIL channels
+    if head > 0:
+        # save where is head
+        headmask = target[:, head:head + 1, :, :, :]
+        # print(
+        #     f"HEAD: {head}, TARGET: {target.shape}, HEADMASK: {headmask.shape}")
+        #exclude head from target
+        _pre = target[:, :head, :, :, :]
+        _post = target[:, head + 1:, :, :, :]
+        target = torch.cat([_pre, _post], dim=1)
+        if tail > 0:
+            tail -= 1
+        # all positive classes are head
+        if headmask.shape[1] > 0:
+            target[:, 1:, :, :, :] += headmask
+
+    if tail > 0:
+        # save where is tail
+        tailmask = target[:, tail:tail + 1, :, :, :]
+        # print(
+        #     f"TAIL: {tail}, TARGET: {target.shape}, HEADMASK: {tailmask.shape}, INPUT: {input.shape}"
+        # )
+        #exclude tail from target
+        _pre = target[:, :tail, :, :, :]
+        _post = target[:, tail + 1:, :, :, :]
+        target = torch.cat([_pre, _post], dim=1)
+        # all positive classes are tail
+        if tailmask.shape[1] > 0:
+            #CA1
+            target[:, 2:3, :, :, :] += tailmask
+            #DG
+            # target[:, 1:2, :, :, :] += tailmask
+            #SUB
+            target[:, -1:, :, :, :] += tailmask
+
+    if ca_type == "1/2/3":
+        # 1 DG; 2 CA1; 3 CA2; 4 CA3; 5 SUB
+        input_compat = input
+    elif ca_type == "1/23":
+        # 1 DG; 2 CA1; 3 CA2/3; 4 SUB
+        _pre = input[:, :3, :, :, :]
+        _in = input[:, 3:5, :, :, :].sum(1, keepdim=True)
+        _post = input[:, 5:, :, :, :]
+
+        input_compat = torch.cat((_pre, _in, _post), dim=1)
+    elif ca_type == "123":
+        # 1 DG; 2 CA1/2/3; 3 SUB
+        _pre = input[:, :2, :, :, :]
+        _in = input[:, 2:5, :, :, :].sum(1, keepdim=True)
+        _post = input[:, 5:, :, :, :]
+
+        input_compat = torch.cat((_pre, _in, _post), dim=1)
+
+    # if head > 0:
+    #     # 1DG 2-NCA N+1HEAD;]
+
+    #     _pre = target[:, :head, :, :, :]
+    #     _post = target[:, head + 1:, :, :, :]
+    #     target = torch.cat((_pre, _post), dim=1)
+
+    # if tail > 0:
+    #     torch.where(target[:, tail, :, :, :] == 1)
+    #     target = target[:, :tail, :, :, :]
+
+    # print("input_compat", input_compat.shape)
+    # print("target", target.shape)
+    # print("mask", mask.shape)
+    assert input_compat.shape == target.shape, f"Can't match input of shape {input_compat.shape} with a target of shape {target.shape}"
+
+    return loss(input_compat.to(input.device), target)
