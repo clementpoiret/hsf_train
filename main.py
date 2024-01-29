@@ -67,9 +67,11 @@ def main(cfg: DictConfig) -> None:
             # tio.RandomSpike(p=.01),
             # tio.RandomBiasField(coefficients=.2, p=.01),
         ]),
-        postprocessing_pipeline=tio.Compose(
-            [tio.EnsureShapeMultiple(8),
-             tio.OneHot()]))
+        postprocessing_pipeline=tio.Compose([
+            tio.CopyAffine("mri"),
+            tio.EnsureShapeMultiple(8),
+            tio.OneHot(),
+        ]))
 
     wandb.login(key=os.getenv("WANDB_API_KEY"))
     wandb_logger = WandbLogger(name=name, project="arunet2")
