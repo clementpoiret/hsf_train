@@ -314,7 +314,7 @@ class SegmentationModel(L.LightningModule):
         head = names.get("HEAD", -1)
         tail = names.get("TAIL", -2)
 
-        y_hat = self.forward(x.bfloat16())
+        y_hat = self.forward(x.float())
         loss = forgiving_loss(self.seg_loss,
                               y_hat,
                               y,

@@ -300,7 +300,7 @@ class Encoder(nn.Module):
                  conv_kernel_size=3,
                  apply_pooling=True,
                  pool_kernel_size=2,
-                 pool_type='max',
+                 pool_type='strided_conv',
                  basic_module=DoubleConv,
                  conv_layer_order='gcr',
                  padding=1):
