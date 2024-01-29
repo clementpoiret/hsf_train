@@ -96,11 +96,14 @@ def main(cfg: DictConfig) -> None:
 
     trainer = L.Trainer(logger=wandb_logger,
                         callbacks=[
-                            ModelCheckpoint(monitor="val/epoch/loss",
-                                            mode="min",
-                                            save_top_k=1,
-                                            save_last=True,
-                                            verbose=True)
+                            ModelCheckpoint(
+                                monitor="val/epoch/loss",
+                                mode="min",
+                                save_top_k=1,
+                                save_last=True,
+                                verbose=True,
+                                dirpath=f"{cfg.datasets.output_path}/ckpt/",
+                                filename=f"arunet_{VERSION}_{ts}"),
                         ],
                         **cfg.lightning)
 
@@ -108,26 +111,27 @@ def main(cfg: DictConfig) -> None:
 
     dummy_input = torch.randn(1, 1, 16, 16, 16)
     model.eval()
-    torch.onnx.export(model,
-                      dummy_input,
-                      f"{cfg.datasets.output_path}arunet_{VERSION}_{ts}.onnx",
-                      input_names=["cropped_hippocampus"],
-                      output_names=["segmented_hippocampus"],
-                      dynamic_axes={
-                          'cropped_hippocampus': {
-                              0: 'batch',
-                              2: "x",
-                              3: "y",
-                              4: "z"
-                          },
-                          'segmented_hippocampus': {
-                              0: 'batch',
-                              2: "x",
-                              3: "y",
-                              4: "z"
-                          }
-                      },
-                      opset_version=17)
+    torch.onnx.export(
+        model,
+        dummy_input,
+        f"{cfg.datasets.output_path}/onnx/arunet_{VERSION}_{ts}.onnx",
+        input_names=["cropped_hippocampus"],
+        output_names=["segmented_hippocampus"],
+        dynamic_axes={
+            'cropped_hippocampus': {
+                0: 'batch',
+                2: "x",
+                3: "y",
+                4: "z"
+            },
+            'segmented_hippocampus': {
+                0: 'batch',
+                2: "x",
+                3: "y",
+                4: "z"
+            }
+        },
+        opset_version=17)
 
 
 if __name__ == "__main__":
