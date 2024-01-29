@@ -47,6 +47,7 @@ def main(cfg: DictConfig) -> None:
         preprocessing_pipeline=tio.Compose([
             tio.ToCanonical(),
             tio.ZNormalization(),
+            tio.OneHot(),
         ]),
         augmentation_pipeline=tio.Compose([
             tio.RandomFlip(axes=('LR',), p=.5),
@@ -70,7 +71,6 @@ def main(cfg: DictConfig) -> None:
         postprocessing_pipeline=tio.Compose([
             tio.CopyAffine("mri"),
             tio.EnsureShapeMultiple(8),
-            tio.OneHot(),
         ]))
 
     wandb.login(key=os.getenv("WANDB_API_KEY"))
