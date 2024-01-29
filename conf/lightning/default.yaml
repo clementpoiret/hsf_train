@@ -1,7 +1,7 @@
 accelerator: "gpu"
 strategy: "auto"
 devices: "-1"
-precision: "16-mixed"
+precision: "bf16-true"
 max_epochs: 64
 log_every_n_steps: 1
 benchmark: true
