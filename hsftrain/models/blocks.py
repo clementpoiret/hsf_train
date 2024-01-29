@@ -300,7 +300,7 @@ class Encoder(nn.Module):
                  conv_kernel_size=3,
                  apply_pooling=True,
                  pool_kernel_size=2,
-                 pool_type='max',
+                 pool_type='strided_conv',
                  basic_module=DoubleConv,
                  conv_layer_order='gcr',
                  padding=1):
@@ -312,8 +312,9 @@ class Encoder(nn.Module):
             elif pool_type == 'strided_conv':
                 self.pooling = nn.Conv3d(in_channels,
                                          in_channels,
-                                         kernel_size=1,
+                                         kernel_size=3,
                                          stride=2,
+                                         padding=3 // 2,
                                          bias=False)
             else:
                 self.pooling = nn.AvgPool3d(kernel_size=pool_kernel_size)
