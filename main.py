@@ -111,7 +111,7 @@ def main(cfg: DictConfig) -> None:
 
     trainer.fit(model, datamodule=mri_datamodule)
 
-    dummy_input = torch.randn(1, 1, 16, 16, 16)
+    dummy_input = torch.randn(1, 1, 16, 16, 16).to(model.device).bfloat16()
     model.eval()
     torch.onnx.export(
         model,
