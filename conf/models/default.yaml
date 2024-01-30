@@ -4,5 +4,5 @@ hparams:
   out_channels: 6
   f_maps: 64
   num_levels: 4
-  layer_order: "csg"
+  layer_order: "cgs"
   use_attention: True
