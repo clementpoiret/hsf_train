@@ -20,7 +20,7 @@ from hsftrain.data.loader import load_from_config
 from hsftrain.models.losses import FocalTversky_loss
 from hsftrain.models.models import SegmentationModel
 
-VERSION = "2.0.0"
+VERSION = "3.0.0"
 FORMAT = "%(message)s"
 logging.basicConfig(level="INFO",
                     format=FORMAT,
@@ -92,6 +92,7 @@ def main(cfg: DictConfig) -> None:
     hparams = cfg.models.hparams
 
     model = SegmentationModel(hparams=hparams,
+                              learning_rate=1e-2,
                               seg_loss=seg_loss,
                               epochs=cfg.lightning.max_epochs,
                               steps_per_epoch=steps_per_epoch)
