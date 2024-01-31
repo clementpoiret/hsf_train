@@ -60,5 +60,6 @@ def load_from_config(data_cfg: DictConfig):
                    label_pattern=label_pattern,
                    labels_names=labels_names,
                    ca_type=ca_type,
+                   train_on_all=data_cfg.train_on_all,
                    num_workers=data_cfg.num_workers,
                    pin_memory=data_cfg.pin_memory)

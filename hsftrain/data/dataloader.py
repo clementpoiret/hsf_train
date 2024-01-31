@@ -41,6 +41,7 @@ class MRIDataModule(L.LightningDataModule):
                  volume_pattern: list = ["**/tse*right*.nii.gz"],
                  label_pattern: list = ["seg*hippocampus_right*.nii.gz"],
                  ca_type: list = ["1/2/3"],
+                 train_on_all: bool = False,
                  num_workers: int = 4,
                  pin_memory: bool = True):
         super().__init__()
@@ -58,6 +59,7 @@ class MRIDataModule(L.LightningDataModule):
         self.postprocessing_pipeline = postprocessing_pipeline
         self.specific_pipeline = specific_pipeline
         self.ca_type = ca_type
+        self.train_on_all = train_on_all
         self.labels_names = labels_names
         self.num_workers = num_workers
         self.pin_memory = pin_memory
@@ -137,6 +139,11 @@ class MRIDataModule(L.LightningDataModule):
                                                   replace=self.replace,
                                                   k_sample=self.k_sample)
             test_idx = val_idx  # ! WARNING: ONLY FOR TESTING
+
+        # If train_on_all is True, train on all subjects
+        # (only for testing or later fine-tuning)
+        if self.train_on_all:
+            train_idx = idx
 
         self.subjects_train_list = [subjects_list[i] for i in train_idx]
         self.subjects_val_list = [subjects_list[i] for i in val_idx]
