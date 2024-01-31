@@ -20,7 +20,7 @@ from hsftrain.data.loader import load_from_config
 from hsftrain.models.losses import FocalTversky_loss
 from hsftrain.models.models import SegmentationModel
 
-VERSION = "3.0.0"
+VERSION = "4.0.0"
 FORMAT = "%(message)s"
 logging.basicConfig(level="INFO",
                     format=FORMAT,
@@ -112,8 +112,9 @@ def main(cfg: DictConfig) -> None:
 
     trainer.fit(model, datamodule=mri_datamodule)
 
-    dummy_input = torch.randn(1, 1, 16, 16, 16).to(model.device).bfloat16()
+    dummy_input = torch.randn(1, 1, 16, 16, 16)
     model.eval()
+    model = model.to("cpu").float()
     torch.onnx.export(
         model,
         dummy_input,
