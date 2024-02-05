@@ -122,7 +122,7 @@ def main(cfg: DictConfig) -> None:
 
     if cfg.models.use_sparseml:
         exporter = TorchToONNX(
-            sample_batch=dummy_input,
+            sample_batch=dummy_input.to(model.device),
             input_names=["cropped_hippocampus"],
             output_names=["segmented_hippocampus"],
             opset=17,
