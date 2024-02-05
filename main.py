@@ -93,7 +93,7 @@ def main(cfg: DictConfig) -> None:
     hparams = cfg.models.hparams
 
     model = SegmentationModel(hparams=hparams,
-                              learning_rate=1e-2,
+                              learning_rate=1e-3,
                               seg_loss=seg_loss,
                               epochs=cfg.lightning.max_epochs,
                               steps_per_epoch=steps_per_epoch)
