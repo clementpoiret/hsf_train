@@ -2,21 +2,22 @@ import logging
 import os
 from copy import deepcopy
 from datetime import datetime
-from pathlib import Path
-from typing import List
 
 import hydra
 import lightning as L
 import torch
 import torchio as tio
 from dotenv import load_dotenv
-from lightning.pytorch.callbacks import Callback, ModelCheckpoint
+from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from rich.logging import RichHandler
+from sparseml.exporters.onnx_to_deepsparse import ONNXToDeepsparse
 
 import wandb
+from hsftrain.callbacks import SparseMLCallback
 from hsftrain.data.loader import load_from_config
+from hsftrain.exporter import TorchToONNX
 from hsftrain.models.losses import FocalTversky_loss
 from hsftrain.models.models import SegmentationModel
 
@@ -97,45 +98,69 @@ def main(cfg: DictConfig) -> None:
                               epochs=cfg.lightning.max_epochs,
                               steps_per_epoch=steps_per_epoch)
 
+    callbacks = [
+        ModelCheckpoint(monitor="val/epoch/loss",
+                        mode="min",
+                        save_top_k=1,
+                        save_last=True,
+                        verbose=True,
+                        dirpath=f"{cfg.datasets.output_path}ckpt/",
+                        filename=f"arunet_{VERSION}_{ts}"),
+    ]
+    if cfg.models.use_sparseml:
+        sparseml = SparseMLCallback(recipe_path="sparseml/recipe.yaml",
+                                    steps_per_epoch=steps_per_epoch)
+        callbacks.append(sparseml)
     trainer = L.Trainer(logger=wandb_logger,
-                        callbacks=[
-                            ModelCheckpoint(
-                                monitor="val/epoch/loss",
-                                mode="min",
-                                save_top_k=1,
-                                save_last=True,
-                                verbose=True,
-                                dirpath=f"{cfg.datasets.output_path}ckpt/",
-                                filename=f"arunet_{VERSION}_{ts}"),
-                        ],
+                        callbacks=callbacks,
                         **cfg.lightning)
 
     trainer.fit(model, datamodule=mri_datamodule)
 
     dummy_input = torch.randn(1, 1, 16, 16, 16)
     model.eval()
-    model = model.to("cpu").float()
-    torch.onnx.export(
-        model,
-        dummy_input,
-        f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}.onnx",
-        input_names=["cropped_hippocampus"],
-        output_names=["segmented_hippocampus"],
-        dynamic_axes={
-            'cropped_hippocampus': {
-                0: 'batch',
-                2: "x",
-                3: "y",
-                4: "z"
+
+    if cfg.models.use_sparseml:
+        exporter = TorchToONNX(
+            sample_batch=dummy_input,
+            input_names=["cropped_hippocampus"],
+            output_names=["segmented_hippocampus"],
+            opset=17,
+        )
+        exporter.export(
+            model,
+            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}.onnx",
+        )
+
+        # Convert to deepsparse
+        exporter = ONNXToDeepsparse(skip_input_quantize=False)
+        exporter.export(
+            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}.onnx",
+            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}_deepsparse.onnx",
+        )
+    else:
+        model = model.to("cpu").float()
+        torch.onnx.export(
+            model,
+            dummy_input,
+            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}.onnx",
+            input_names=["cropped_hippocampus"],
+            output_names=["segmented_hippocampus"],
+            dynamic_axes={
+                'cropped_hippocampus': {
+                    0: 'batch',
+                    2: "x",
+                    3: "y",
+                    4: "z"
+                },
+                'segmented_hippocampus': {
+                    0: 'batch',
+                    2: "x",
+                    3: "y",
+                    4: "z"
+                }
             },
-            'segmented_hippocampus': {
-                0: 'batch',
-                2: "x",
-                3: "y",
-                4: "z"
-            }
-        },
-        opset_version=17)
+            opset_version=17)
 
 
 if __name__ == "__main__":

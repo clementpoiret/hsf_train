@@ -6,3 +6,5 @@ hparams:
   num_levels: 4
   layer_order: "cgs"
   use_attention: True
+
+use_sparseml: False

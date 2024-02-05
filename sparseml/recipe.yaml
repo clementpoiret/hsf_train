@@ -1,0 +1,35 @@
+# Epoch and Learning-Rate variables
+num_epochs: 64
+quantization_epochs: 32
+
+modifiers:
+    - !EpochRangeModifier
+        start_epoch: 0.0
+        end_epoch: eval(num_epochs)
+
+    - !GMPruningModifier
+        start_epoch: eval(0.1 * num_epochs)
+        end_epoch: eval(num_epochs - quantization_epochs)
+        update_frequency: 2.0
+        init_sparsity: 0.05
+        final_sparsity: 0.50
+        mask_type: unstructured
+        inter_func: cubic
+        leave_enabled: true
+        params: __ALL__
+
+    - !ConstantPruningModifier
+        params: __ALL__
+        start_epoch: eval(num_epochs - quantization_epochs)
+        end_epoch: eval(num_epochs)
+
+    - !QuantizationModifier
+        start_epoch: eval(num_epochs - quantization_epochs)
+        scheme:
+          input_activations:
+            num_bits: 8
+            symmetric: False
+          weights:
+            num_bits: 8
+            symmetric: True
+        freeze_bn_stats_epoch: eval(num_epochs - quantization_epochs)
