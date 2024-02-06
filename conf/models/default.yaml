@@ -8,3 +8,5 @@ hparams:
   use_attention: True
 
 use_sparseml: False
+use_forgiving_loss: True
+lr: 1e-2

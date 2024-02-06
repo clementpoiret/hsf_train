@@ -20,6 +20,7 @@ from hsftrain.data.loader import load_from_config
 from hsftrain.exporter import TorchToONNX
 from hsftrain.models.losses import FocalTversky_loss
 from hsftrain.models.models import SegmentationModel
+from hsftrain.utils import fetch
 
 VERSION = "4.0.0"
 FORMAT = "%(message)s"
@@ -41,9 +42,10 @@ load_dotenv()
 def main(cfg: DictConfig) -> None:
     dt = datetime.now()
     ts = int(datetime.timestamp(dt))
-    name = f"arunet2_{ts}"
+    name = f"finetuned_arunet2_{ts}"
     log.info(f"Experiment name: {name}")
 
+    # Data setup
     mri_datamodule = load_from_config(cfg.datasets)(
         preprocessing_pipeline=tio.Compose([
             tio.ToCanonical(),
@@ -88,17 +90,26 @@ def main(cfg: DictConfig) -> None:
 
     wandb_logger.experiment.config.update({"train_size": N, "val_size": N_val})
 
-    seg_loss = FocalTversky_loss({"apply_nonlin": None})
+    # Fetch checkpoint
+    fetch(
+        directory=".",
+        filename="arunet.ckpt",
+        url=
+        "https://huggingface.co/poiretclement/hsf/resolve/main/ckpt/arunet_4.0.0single_1706895706.ckpt",
+        xxh3_64="3165f610a375ba33")
 
+    seg_loss = FocalTversky_loss({"apply_nonlin": None})
     hparams = cfg.models.hparams
 
-    model = SegmentationModel(hparams=hparams,
-                              learning_rate=cfg.models.lr,
-                              seg_loss=seg_loss,
-                              use_forgiving_loss=cfg.models.use_forgiving_loss,
-                              epochs=cfg.lightning.max_epochs,
-                              steps_per_epoch=steps_per_epoch,
-                              precision=cfg.lightning.precision)
+    model = SegmentationModel.load_from_checkpoint(
+        "arunet.ckpt",
+        hparams=hparams,
+        learning_rate=cfg.models.lr,
+        seg_loss=seg_loss,
+        epochs=cfg.lightning.max_epochs,
+        steps_per_epoch=steps_per_epoch,
+        use_forgiving_loss=cfg.models.use_forgiving_loss,
+        precision=cfg.lightning.precision)
 
     callbacks = [
         ModelCheckpoint(monitor="val/epoch/loss",
@@ -107,10 +118,10 @@ def main(cfg: DictConfig) -> None:
                         save_last=True,
                         verbose=True,
                         dirpath=f"{cfg.datasets.output_path}ckpt/",
-                        filename=f"arunet_{VERSION}_{ts}"),
+                        filename=f"finetuned_arunet_{VERSION}_{ts}"),
     ]
     if cfg.models.use_sparseml:
-        sparseml = SparseMLCallback(recipe_path="sparseml/scratch.yaml",
+        sparseml = SparseMLCallback(recipe_path="sparseml/finetuning.yaml",
                                     steps_per_epoch=steps_per_epoch)
         callbacks.append(sparseml)
     trainer = L.Trainer(logger=wandb_logger,
@@ -131,21 +142,21 @@ def main(cfg: DictConfig) -> None:
         )
         exporter.export(
             model,
-            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}.onnx",
+            f"{cfg.datasets.output_path}onnx/finetuned_arunet_{VERSION}_{ts}.onnx",
         )
 
         # Convert to deepsparse
         exporter = ONNXToDeepsparse(skip_input_quantize=False)
         exporter.export(
-            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}.onnx",
-            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}_deepsparse.onnx",
+            f"{cfg.datasets.output_path}onnx/finetuned_arunet_{VERSION}_{ts}.onnx",
+            f"{cfg.datasets.output_path}onnx/finetuned_arunet_{VERSION}_{ts}_deepsparse.onnx",
         )
     else:
         model = model.to("cpu").float()
         torch.onnx.export(
             model,
             dummy_input,
-            f"{cfg.datasets.output_path}onnx/arunet_{VERSION}_{ts}.onnx",
+            f"{cfg.datasets.output_path}onnx/finetuned_arunet_{VERSION}_{ts}.onnx",
             input_names=["cropped_hippocampus"],
             output_names=["segmented_hippocampus"],
             dynamic_axes={

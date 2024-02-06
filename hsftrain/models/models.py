@@ -228,25 +228,28 @@ class ResidualUNet3D(Abstract3DUNet):
 
 class SegmentationModel(L.LightningModule):
 
-    def __init__(
-        self,
-        hparams,
-        seg_loss=FocalTversky_loss({"apply_nonlin": nn.Softmax(dim=1)}),
-        optimizer=AdamP,
-        scheduler=LinearWarmupCosineAnnealingLR,
-        learning_rate=1e-3,
-        classes_names=None,
-        epochs=100,
-        steps_per_epoch=100,
-    ):
+    def __init__(self,
+                 hparams,
+                 seg_loss=FocalTversky_loss({"apply_nonlin": nn.Softmax(dim=1)
+                                            }),
+                 use_forgiving_loss=True,
+                 optimizer=AdamP,
+                 scheduler=LinearWarmupCosineAnnealingLR,
+                 learning_rate=1e-3,
+                 classes_names=None,
+                 epochs=100,
+                 steps_per_epoch=100,
+                 precision="bf16-true"):
         super(SegmentationModel, self).__init__()
         self.hp = hparams
         self.learning_rate = learning_rate
         self.seg_loss = seg_loss
+        self.use_forgiving_loss = use_forgiving_loss
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.epochs = epochs
         self.steps_per_epoch = steps_per_epoch
+        self.precision = precision
 
         if classes_names:
             assert len(classes_names) == hparams['out_channels']
@@ -308,21 +311,28 @@ class SegmentationModel(L.LightningModule):
 
     def step(self, batch, batch_idx, step_name="Training"):
         x, y = batch["mri"]["data"], batch["label"]["data"]
+        if "bf16" in self.precision:
+            x = x.bfloat16()
+        else:
+            x = x.float()
+
         _, labels = y.max(dim=1)
 
         names = {v[0]: k for k, v in batch["labels_names"].items()}
         head = names.get("HEAD", -1)
         tail = names.get("TAIL", -2)
 
-        y_hat = self.forward(x.float())
-        loss = forgiving_loss(self.seg_loss,
-                              y_hat,
-                              y,
-                              batch["ca_type"][0],
-                              head=head,
-                              tail=tail)
+        y_hat = self.forward(x)
 
-        return loss
+        if self.use_forgiving_loss:
+            return forgiving_loss(self.seg_loss,
+                                  y_hat,
+                                  y,
+                                  batch["ca_type"][0],
+                                  head=head,
+                                  tail=tail)
+
+        return self.seg_loss(y_hat, y)
 
     def training_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx, step_name="Training")

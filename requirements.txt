@@ -9,3 +9,5 @@ sparseml
 onnxruntime==1.16.2
 onnx
 python-dotenv
+xxhash
+wget
