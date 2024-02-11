@@ -239,7 +239,8 @@ class SegmentationModel(L.LightningModule):
                  classes_names=None,
                  epochs=100,
                  steps_per_epoch=100,
-                 precision="bf16-true"):
+                 precision="bf16-true",
+                 finetuning_cfg=None):
         super(SegmentationModel, self).__init__()
         self.hp = hparams
         self.learning_rate = learning_rate
@@ -250,6 +251,7 @@ class SegmentationModel(L.LightningModule):
         self.epochs = epochs
         self.steps_per_epoch = steps_per_epoch
         self.precision = precision
+        self.finetuning_cfg = finetuning_cfg
 
         if classes_names:
             assert len(classes_names) == hparams['out_channels']
@@ -270,10 +272,70 @@ class SegmentationModel(L.LightningModule):
             metric.VolumeSimilarity(),
             metric.MahalanobisDistance()
         ]
-        # self.evaluator = eval_.SegmentationEvaluator(metrics, labels)
 
         self.training_step_loss = torch.tensor([])
         self.validation_step_loss = torch.tensor([])
+
+    def prepare_finetuning(self):
+        if self.finetuning_cfg.depth != -1:
+            if self.finetuning_cfg.mode == "encoder":
+                assert self.finetuning_cfg.depth <= len(
+                    self._model.encoders
+                ), "Invalid depth for encoder finetuning"
+            if self.finetuning_cfg.mode == "decoder":
+                assert self.finetuning_cfg.depth <= len(
+                    self._model.decoders
+                ), "Invalid depth for decoder finetuning"
+
+        if self.finetuning_cfg.out_channels != self.hp.out_channels:
+            print(
+                "Different number of classes detected. Replacing the last layer."
+            )
+            self._model.final_conv = nn.Conv3d(64,
+                                               self.finetuning_cfg.out_channels,
+                                               1)
+
+        # Freeze all layers except the last one
+        print("Freezing all layers except the last one")
+        for name, param in self._model.named_parameters():
+            if "final_conv" not in name:
+                param.requires_grad = False
+
+    def _adjust_finetuning(self, epoch):
+        if epoch < self.finetuning_cfg.unfreeze_frequency:
+            return
+
+        if epoch % self.finetuning_cfg.unfreeze_frequency == 1:
+            current_depth = epoch // self.finetuning_cfg.unfreeze_frequency
+
+            if self.finetuning_cfg.mode == "encoder":
+                max_depth = len(
+                    self._model.encoders
+                ) if self.finetuning_cfg.depth == -1 else self.finetuning_cfg.depth
+
+                for i, encoder in enumerate(self._model.encoders):
+                    if (i < current_depth) and (i <= max_depth):
+                        print(f"Unfreezing encoder {i}")
+                        for param in encoder.parameters():
+                            param.requires_grad = True
+                    else:
+                        for param in encoder.parameters():
+                            param.requires_grad = False
+
+            if self.finetuning_cfg.mode == "decoder":
+                max_depth = len(
+                    self._model.decoders
+                ) if self.finetuning_cfg.depth == -1 else self.finetuning_cfg.depth
+
+                # Decoders are in reverse order
+                for i, decoder in enumerate(reversed(self._model.decoders)):
+                    if (i < current_depth) and (i <= max_depth):
+                        print(f"Unfreezing decoder {i}")
+                        for param in decoder.parameters():
+                            param.requires_grad = True
+                    else:
+                        for param in decoder.parameters():
+                            param.requires_grad = False
 
     def forward(self, x):
         return self._model(x)
@@ -281,8 +343,7 @@ class SegmentationModel(L.LightningModule):
     def configure_optimizers(self):
         num_iterations = self.epochs * self.steps_per_epoch
 
-        optimizer = self.optimizer(params=filter(lambda p: p.requires_grad,
-                                                 self.parameters()),
+        optimizer = self.optimizer(self._model.parameters(),
                                    lr=self.learning_rate,
                                    epochs=self.epochs,
                                    steps_per_epoch=self.steps_per_epoch,
@@ -333,6 +394,10 @@ class SegmentationModel(L.LightningModule):
                                   tail=tail)
 
         return self.seg_loss(y_hat, y)
+
+    def on_train_epoch_start(self):
+        if self.finetuning_cfg:
+            self._adjust_finetuning(self.current_epoch)
 
     def training_step(self, batch, batch_idx):
         loss = self.step(batch, batch_idx, step_name="Training")

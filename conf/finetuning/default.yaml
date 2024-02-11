@@ -1,0 +1,4 @@
+mode: decoder
+depth: -1
+unfreeze_frequency: 4
+out_channels: 6

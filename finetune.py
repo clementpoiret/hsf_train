@@ -109,7 +109,10 @@ def main(cfg: DictConfig) -> None:
         epochs=cfg.lightning.max_epochs,
         steps_per_epoch=steps_per_epoch,
         use_forgiving_loss=cfg.models.use_forgiving_loss,
-        precision=cfg.lightning.precision)
+        precision=cfg.lightning.precision,
+        finetuning_cfg=cfg.finetuning,
+    )
+    model.prepare_finetuning()
 
     callbacks = [
         ModelCheckpoint(monitor="val/epoch/loss",
