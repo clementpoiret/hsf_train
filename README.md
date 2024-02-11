@@ -32,11 +32,10 @@
 > - [ Getting Started](#-getting-started)
 >   - [ Installation](#-installation)
 >   - [Running hsf_train](#-running-hsf_train)
->   - [ Tests](#-tests)
-> - [ Project Roadmap](#-project-roadmap)
+> - [ Changelog](#-changelog)
 > - [ Contributing](#-contributing)
 > - [ License](#-license)
-> - [ Acknowledgments](#-acknowledgments)
+> - [ Citing HSF](#-citing-hsf)
 
 ---
 
@@ -266,7 +265,9 @@ Example command to fine-tune a model:
 python finetune.py datasets=custom_dataset finetuning.out_channels=8 models.lr=1e-3 models.use_forgiving_loss=False
 ```
 
-###  Changelog
+---
+
+##  Changelog
 
 The implementation of the `hsf_train` repository is slightly different for the original paper as it proposes several improvements and optimizations.
 
