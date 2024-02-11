@@ -136,6 +136,8 @@ def main(cfg: DictConfig) -> None:
     dummy_input = torch.randn(1, 1, 16, 16, 16)
     model.eval()
 
+    os.makedirs(f"{cfg.datasets.output_path}onnx", exist_ok=True)
+
     if cfg.models.use_sparseml:
         exporter = TorchToONNX(
             sample_batch=dummy_input.to(model.device),
